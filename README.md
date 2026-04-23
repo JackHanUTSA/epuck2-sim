@@ -1,24 +1,96 @@
-# E-puck2 Obstacle Avoidance Simulation
+# e-puck2 Simulation, Team Control, and ROS2 Dashboard
 
-Simple Braitenberg-style obstacle avoidance for the e-puck2 in Webots.
+This repository combines three related workflows for e-puck2 robots:
+- Webots simulation worlds for single-robot and swarm experiments
+- a Dreamer-style 4-robot cooperative control environment and trainer
+- a ROS 2 team dashboard for controlling 4 real e-puck2 robots as one group
 
-## Quick Start
+## Main use cases
+
+1. Quick Webots testing
+- single-robot obstacle avoidance
+- 10-robot swarm motion
+- 4-robot coordinated virtual-body team behavior
+
+2. Training and evaluation
+- abstract CPU trainer
+- GPU batched PyTorch trainer
+- live Webots bridge for end-to-end rollout checks
+
+3. Real-world 4-robot team operations
+- set robot names and IP addresses
+- verify each robot is reachable
+- send one command to the whole team
+- optionally connect a top camera
+- launch the full robot stack from the dashboard
+
+## Quick start
+
+Single-robot Webots demo:
 
 ```bash
-# Open in Webots
 webots /home/jack/swarmlab/projects/epuck2-sim/worlds/epuck2_obstacle_avoidance.wbt
 ```
 
-Or: Webots → File → Open World → select the `.wbt` file.
+ROS 2 team dashboard for 4 robots:
 
-## What It Does
+```bash
+cd /home/jack/swarmlab/projects/epuck2-sim/ros2_ws
+export PATH=/usr/bin:$PATH
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch epuck_swarm_control epuck_team_work_launch.py
+```
 
-The e-puck2 navigates a 1m×1m arena with 6 wooden box obstacles.
-Uses a **Braitenberg vehicle** approach — direct sensor-motor coupling
-with no explicit planning. 8 IR proximity sensors drive differential
-wheel speeds through a weight matrix.
+Then open:
 
-## Files
+```text
+http://127.0.0.1:8080
+```
+
+## Real 4-e-puck2 team workflow
+
+The main real-world operator interface lives in:
+- `ros2_ws/src/epuck_swarm_control/epuck_swarm_control/epuck_team_dashboard.py`
+
+What the dashboard does:
+- configure four robot names
+- configure four robot IP addresses
+- validate that robot IPs are unique and well-formed
+- ping each robot to confirm reachability
+- publish group commands to `/<robot_name>/cmd_vel`
+- accept a top-camera source:
+  - RTSP URL
+  - HTTP stream URL
+  - local device index like `0`
+- show startup status for a configurable bring-up command
+- provide one-click group commands:
+  - forward
+  - backward
+  - turn left
+  - turn right
+  - arc left
+  - arc right
+  - stop
+
+Recommended real-robot bring-up sequence:
+1. Launch the dashboard
+2. Enter the exact ROS robot names/namespaces for all 4 e-puck2 robots
+3. Enter the IP address of each robot
+4. Enter the top camera source if available
+5. Enter the full system startup command in the dashboard
+6. Click `Start System`
+7. Click `Check robots + camera`
+8. Confirm the dashboard reports all 4 robots reachable
+9. Use group motion commands once the robot-side ROS topics are live
+
+Important integration note:
+- The dashboard assumes each real robot accepts velocity commands on:
+  - `/<robot_name>/cmd_vel`
+- If your real e-puck2 bridge uses different topic names, remap or update the dashboard accordingly.
+
+## Repository layout
 
 Obstacle avoidance demo:
 - `worlds/epuck2_obstacle_avoidance.wbt` — single-robot Webots world file
@@ -207,3 +279,12 @@ Note: on this machine, other GPU workloads (for example Ollama) can occupy most 
 - **Max speed:** 6.28 rad/s
 - **Time step:** 16ms
 - **Logging:** Prints front proximity + wheel speeds every 2s
+
+## ROS 2 workspace notes
+
+For the dedicated ROS 2 instructions, see:
+- `ros2_ws/README.md`
+
+## License
+
+MIT — see `LICENSE`.
