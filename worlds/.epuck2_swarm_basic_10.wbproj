@@ -1,0 +1,20 @@
+Webots Project File version R2025a
+perspectives: 000000ff00000000fd00000002000000010000011c000001ccfc0200000001fb0000001400540065007800740045006400690074006f00720100000013000001cc0000003f00ffffff0000000300000500000000d9fc0100000001fb0000001a0043006f006e0073006f006c00650041006c006c0041006c006c0100000000000005000000006900ffffff000003e2000001cc00000001000000020000000100000008fc00000000
+simulationViewPerspectives: 000000ff000000010000000200000101000002e10100000002010000000100
+sceneTreePerspectives: 000000ff0000000100000003000000c8000000c8000000000100000002010000000200
+maximizedDockId: -1
+centralWidgetVisible: 1
+orthographicViewHeight: 1
+textFiles: -1
+consoles: Console:All:All
+renderingDevicePerspectives: epuck2_01:camera;1;1;0;0
+renderingDevicePerspectives: epuck2_02:camera;1;1;0;0
+renderingDevicePerspectives: epuck2_03:camera;1;1;0;0
+renderingDevicePerspectives: epuck2_04:camera;1;1;0;0
+renderingDevicePerspectives: epuck2_05:camera;1;1;0;0
+renderingDevicePerspectives: epuck2_06:camera;1;1;0;0
+renderingDevicePerspectives: epuck2_07:camera;1;1;0;0
+renderingDevicePerspectives: epuck2_08:camera;1;1;0;0
+renderingDevicePerspectives: epuck2_09:camera;1;1;0;0
+renderingDevicePerspectives: epuck2_10:camera;1;1;0;0
+renderingDevicePerspectives: swarm_capture_supervisor:overhead_camera;1;0.552778;0;0

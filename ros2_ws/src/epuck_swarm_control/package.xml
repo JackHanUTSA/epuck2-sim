@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>epuck_swarm_control</name>
+  <version>0.0.1</version>
+  <description>Reactive Braitenberg-style control for Webots e-puck2 via ROS 2.</description>
+  <maintainer email="zhifeng.han@utsa.edu">JackHanUTSA</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+  <depend>webots_ros2_epuck</depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

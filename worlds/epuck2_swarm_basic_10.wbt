@@ -1,0 +1,138 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/WoodenBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+
+WorldInfo {
+  info [
+    "Swarmlab: 10 e-puck2 robots in a basic arena",
+    "Each robot runs the epuck2_swarm_basic controller"
+  ]
+  title "E-puck2 Basic Swarm x10"
+  basicTimeStep 16
+}
+Viewpoint {
+  orientation 0 0 1 0
+  position 0 0 2.8
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 1.8 1.8
+  wallHeight 0.08
+}
+WoodenBox {
+  translation -0.35 0 0.025
+  rotation 0 0 1 0.35
+  size 0.06 0.06 0.05
+}
+WoodenBox {
+  translation 0.35 0 0.025
+  rotation 0 0 1 0.75
+  name "wooden box(1)"
+  size 0.06 0.06 0.05
+}
+WoodenBox {
+  translation 0 0.38 0.025
+  rotation 0 0 1 1.1
+  name "wooden box(2)"
+  size 0.06 0.06 0.05
+}
+WoodenBox {
+  translation 0 -0.38 0.025
+  rotation 0 0 1 0.2
+  name "wooden box(3)"
+  size 0.06 0.06 0.05
+}
+E-puck {
+  translation -0.45 -0.45 0
+  rotation 0 0 1 0.20
+  name "epuck2_01"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+E-puck {
+  translation -0.15 -0.45 0
+  rotation 0 0 1 1.20
+  name "epuck2_02"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+E-puck {
+  translation 0.15 -0.45 0
+  rotation 0 0 1 2.35
+  name "epuck2_03"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+E-puck {
+  translation 0.45 -0.45 0
+  rotation 0 0 1 -1.10
+  name "epuck2_04"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+E-puck {
+  translation -0.45 0 0
+  rotation 0 0 1 -0.65
+  name "epuck2_05"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+E-puck {
+  translation -0.15 0 0
+  rotation 0 0 1 0.85
+  name "epuck2_06"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+E-puck {
+  translation 0.15 0 0
+  rotation 0 0 1 2.65
+  name "epuck2_07"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+E-puck {
+  translation 0.45 0 0
+  rotation 0 0 1 -2.20
+  name "epuck2_08"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+E-puck {
+  translation -0.30 0.45 0
+  rotation 0 0 1 1.75
+  name "epuck2_09"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+E-puck {
+  translation 0.30 0.45 0
+  rotation 0 0 1 -0.30
+  name "epuck2_10"
+  controller "epuck2_swarm_basic"
+  version "2"
+}
+Robot {
+  translation 0 -10 0
+  children [
+    Camera {
+      name "overhead_camera"
+      width 1280
+      height 720
+      fieldOfView 1.2
+      near 0.01
+      far 20
+      antiAliasing TRUE
+    }
+  ]
+  name "swarm_capture_supervisor"
+  controller "swarm_capture_supervisor"
+  supervisor TRUE
+}

@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+.venv-gpu/
+venv/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Training outputs and checkpoints
+runs/
+*.pt
+*.pth
+*.npy
+*.npz
+*.jsonl
+
+# Large media/debug artifacts
+*.mp4
+*.avi
+*.mov
+*.png
+camera_tests/
+view_tests/
+topdown_frames/
+
+# OS/editor
+.DS_Store
+*.swp
+*.swo
