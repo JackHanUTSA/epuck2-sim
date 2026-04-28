@@ -1,0 +1,100 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/WoodenBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+
+WorldInfo {
+  info [
+    "Swarmlab: Dreamer-inspired four-e-puck virtual-body experiment",
+    "Capture-enabled version with overhead camera supervisor"
+  ]
+  title "E-puck2 Dreamer Team x4 Capture"
+  basicTimeStep 16
+}
+Viewpoint {
+  orientation 0 0 1 0
+  position 0 0 2.2
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 1.4 1.4
+  wallHeight 0.08
+}
+WoodenBox {
+  translation 0.0 0.22 0.025
+  rotation 0 0 1 0.3
+  size 0.08 0.08 0.05
+}
+WoodenBox {
+  translation -0.22 -0.10 0.025
+  rotation 0 0 1 1.05
+  name "wooden box(1)"
+  size 0.08 0.08 0.05
+}
+WoodenBox {
+  translation 0.24 -0.24 0.025
+  rotation 0 0 1 0.7
+  name "wooden box(2)"
+  size 0.08 0.08 0.05
+}
+DEF epuck2_A E-puck {
+  translation -0.06 0.06 0
+  rotation 0 0 1 0
+  name "epuck2_A"
+  controller "epuck2_dreamer_team_member"
+  customData "{}"
+  version "2"
+}
+DEF epuck2_B E-puck {
+  translation 0.06 0.06 0
+  rotation 0 0 1 0
+  name "epuck2_B"
+  controller "epuck2_dreamer_team_member"
+  customData "{}"
+  version "2"
+}
+DEF epuck2_C E-puck {
+  translation -0.06 -0.06 0
+  rotation 0 0 1 0
+  name "epuck2_C"
+  controller "epuck2_dreamer_team_member"
+  customData "{}"
+  version "2"
+}
+DEF epuck2_D E-puck {
+  translation 0.06 -0.06 0
+  rotation 0 0 1 0
+  name "epuck2_D"
+  controller "epuck2_dreamer_team_member"
+  customData "{}"
+  version "2"
+}
+Robot {
+  translation 0 -10 0
+  name "dreamer_team_supervisor"
+  controller "epuck2_dreamer_team_supervisor"
+  supervisor TRUE
+}
+Robot {
+  translation 0 -10 0
+  children [
+    Camera {
+      name "overhead_camera"
+      width 1280
+      height 720
+      fieldOfView 1.2
+      near 0.01
+      far 20
+      antiAliasing TRUE
+    }
+  ]
+  name "swarm_capture_supervisor"
+  controller "swarm_capture_supervisor"
+  supervisor TRUE
+}

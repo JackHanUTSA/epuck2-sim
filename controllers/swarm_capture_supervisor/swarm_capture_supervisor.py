@@ -63,6 +63,21 @@ def main():
             run_steps(supervisor, 10)
             supervisor.simulationQuit(0)
             return
+        if mode == 'view_sequence':
+            out_dir = Path(os.environ.get('SWARM_CAPTURE_DIR', '/tmp/swarm_view_frames'))
+            out_dir.mkdir(parents=True, exist_ok=True)
+            frame_count = int(os.environ.get('SWARM_FRAME_COUNT', '120'))
+            stride = int(os.environ.get('SWARM_FRAME_STRIDE', '2'))
+            for frame_idx in range(frame_count):
+                frame_path = out_dir / f'frame_{frame_idx:04d}.png'
+                supervisor.exportImage(str(frame_path), 100)
+                if not run_steps(supervisor, stride):
+                    supervisor.simulationQuit(0)
+                    return
+            print(f'[capture] exported {frame_count} viewpoint frames to {out_dir}')
+            run_steps(supervisor, 10)
+            supervisor.simulationQuit(0)
+            return
 
     if mode.startswith('camera_'):
         if camera is None:

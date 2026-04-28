@@ -15,8 +15,10 @@ if str(CONTROLLERS_DIR) not in sys.path:
 
 from dreamer_team_common import (  # noqa: E402
     ROLE_ORDER,
+    ObstacleBox,
     compute_centroid,
     normalize_angle,
+    plan_team_path,
     role_target_position,
     tracking_command,
 )
@@ -39,7 +41,17 @@ WAYPOINTS = [
     (0.0, 0.0),
 ]
 WAYPOINT_REACHED_RADIUS = 0.07
+PATH_SUBGOAL_RADIUS = 0.05
 LOG_PERIOD_STEPS = 80
+ARENA_HALF_EXTENT = 0.70
+PATH_GRID_RESOLUTION = 0.04
+TEAM_FORMATION_RADIUS = 0.12
+AUTONOMOUS_LOOKAHEAD_STEP = 0.035
+OBSTACLE_BOXES = [
+    ObstacleBox(center=(0.0, 0.22), size=(0.08, 0.08), yaw=0.3),
+    ObstacleBox(center=(-0.22, -0.10), size=(0.08, 0.08), yaw=1.05),
+    ObstacleBox(center=(0.24, -0.24), size=(0.08, 0.08), yaw=0.7),
+]
 BRIDGE_MAX_FORWARD_SPEED = 0.22
 BRIDGE_MAX_TURN_RATE = 1.4
 BRIDGE_DEFAULT_WAYPOINT = (0.4, 0.0)
@@ -154,29 +166,58 @@ def _write_bridge_snapshot(
     _atomic_write_json(state_path, payload)
 
 
+def _build_team_route(start: tuple[float, float], goal: tuple[float, float]) -> list[tuple[float, float]]:
+    return plan_team_path(
+        start=start,
+        goal=goal,
+        obstacles=OBSTACLE_BOXES,
+        arena_half_extent=ARENA_HALF_EXTENT,
+        formation_radius=TEAM_FORMATION_RADIUS,
+        grid_resolution=PATH_GRID_RESOLUTION,
+    )
+
+
 def run_autonomous(supervisor: Supervisor, nodes: dict[str, object], custom_fields: dict[str, object]) -> None:
     waypoint_index = 0
     step_count = 0
+    poses = {name: node_pose(node) for name, node in nodes.items()}
+    centroid = compute_centroid(poses.values())
+    route = _build_team_route(centroid, WAYPOINTS[waypoint_index])
+    route_index = 1 if len(route) > 1 else 0
     print("[dreamer_team] autonomous supervisor started for four-e-puck virtual body")
+    print(f"[dreamer_team] initial planned route to waypoint {waypoint_index}: {route}")
     while supervisor.step(TIME_STEP) != -1:
         step_count += 1
         poses = {name: node_pose(node) for name, node in nodes.items()}
         centroid = compute_centroid(poses.values())
         waypoint = WAYPOINTS[waypoint_index]
-        dx = waypoint[0] - centroid[0]
-        dy = waypoint[1] - centroid[1]
-        distance_to_waypoint = math.hypot(dx, dy)
+        distance_to_waypoint = math.hypot(waypoint[0] - centroid[0], waypoint[1] - centroid[1])
         if distance_to_waypoint < WAYPOINT_REACHED_RADIUS:
             waypoint_index = (waypoint_index + 1) % len(WAYPOINTS)
             waypoint = WAYPOINTS[waypoint_index]
-            dx = waypoint[0] - centroid[0]
-            dy = waypoint[1] - centroid[1]
+            route = _build_team_route(centroid, waypoint)
+            route_index = 1 if len(route) > 1 else 0
+            print(f"[dreamer_team] replanned route for waypoint {waypoint_index}: {route}")
 
+        if route_index < len(route) - 1:
+            subgoal = route[route_index]
+            if math.hypot(subgoal[0] - centroid[0], subgoal[1] - centroid[1]) < PATH_SUBGOAL_RADIUS:
+                route_index += 1
+        subgoal = route[min(route_index, len(route) - 1)]
+
+        dx = subgoal[0] - centroid[0]
+        dy = subgoal[1] - centroid[1]
+        distance_to_subgoal = math.hypot(dx, dy)
         team_heading = math.atan2(dy, dx) if (abs(dx) + abs(dy)) > 1e-9 else 0.0
+        step_distance = min(AUTONOMOUS_LOOKAHEAD_STEP, distance_to_subgoal)
+        target_centroid = (
+            centroid[0] + math.cos(team_heading) * step_distance,
+            centroid[1] + math.sin(team_heading) * step_distance,
+        )
         _write_member_commands(
             custom_fields=custom_fields,
             poses=poses,
-            centroid=centroid,
+            centroid=target_centroid,
             team_heading=team_heading,
             waypoint=waypoint,
         )
@@ -186,7 +227,8 @@ def run_autonomous(supervisor: Supervisor, nodes: dict[str, object], custom_fiel
             print(
                 "[dreamer_team] "
                 f"step={step_count} centroid=({centroid[0]:.2f},{centroid[1]:.2f}) "
-                f"waypoint=({waypoint[0]:.2f},{waypoint[1]:.2f}) d={distance_to_waypoint:.2f} "
+                f"goal=({waypoint[0]:.2f},{waypoint[1]:.2f}) subgoal=({subgoal[0]:.2f},{subgoal[1]:.2f}) "
+                f"route_idx={route_index}/{max(0, len(route)-1)} d_goal={distance_to_waypoint:.2f} "
                 f"heading_err_avg={sum(abs(v) for v in heading_errors)/len(heading_errors):.2f}"
             )
 

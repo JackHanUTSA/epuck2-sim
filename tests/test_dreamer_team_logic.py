@@ -9,8 +9,10 @@ if str(CONTROLLERS_DIR) not in sys.path:
 
 from dreamer_team_common import (  # noqa: E402
     ROLE_ORDER,
+    ObstacleBox,
     compute_centroid,
     normalize_angle,
+    plan_team_path,
     role_target_position,
     tracking_command,
 )
@@ -49,6 +51,33 @@ class DreamerTeamLogicTests(unittest.TestCase):
 
     def test_role_order_is_four_robot_virtual_body(self):
         self.assertEqual(ROLE_ORDER, ["front_left", "front_right", "rear_left", "rear_right"])
+
+    def test_plan_team_path_returns_direct_segment_when_clear(self):
+        path = plan_team_path(
+            start=(-0.5, -0.5),
+            goal=(0.5, 0.5),
+            obstacles=[],
+            arena_half_extent=0.7,
+            formation_radius=0.12,
+            grid_resolution=0.05,
+        )
+        self.assertEqual(path[0], (-0.5, -0.5))
+        self.assertEqual(path[-1], (0.5, 0.5))
+        self.assertEqual(len(path), 2)
+
+    def test_plan_team_path_detours_around_center_obstacle(self):
+        path = plan_team_path(
+            start=(-0.5, 0.0),
+            goal=(0.5, 0.0),
+            obstacles=[ObstacleBox(center=(0.0, 0.0), size=(0.20, 0.20), yaw=0.0)],
+            arena_half_extent=0.7,
+            formation_radius=0.12,
+            grid_resolution=0.05,
+        )
+        self.assertEqual(path[0], (-0.5, 0.0))
+        self.assertEqual(path[-1], (0.5, 0.0))
+        self.assertGreater(len(path), 2)
+        self.assertTrue(any(abs(y) > 0.14 for _, y in path[1:-1]))
 
 
 if __name__ == "__main__":

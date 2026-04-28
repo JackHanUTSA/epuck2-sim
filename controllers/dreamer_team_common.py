@@ -7,7 +7,9 @@ and add device access on top.
 
 from __future__ import annotations
 
+import heapq
 import math
+from dataclasses import dataclass
 from typing import Iterable
 
 ROLE_ORDER = ["front_left", "front_right", "rear_left", "rear_right"]
@@ -17,6 +19,13 @@ ROLE_SLOT_SIGNS = {
     "rear_left": (-1.0, 1.0),
     "rear_right": (-1.0, -1.0),
 }
+
+
+@dataclass(frozen=True)
+class ObstacleBox:
+    center: tuple[float, float]
+    size: tuple[float, float]
+    yaw: float
 
 
 def clamp(value: float, lo: float, hi: float) -> float:
@@ -35,6 +44,190 @@ def compute_centroid(poses: Iterable[tuple[float, float, float]]) -> tuple[float
     x = sum(p[0] for p in poses) / len(poses)
     y = sum(p[1] for p in poses) / len(poses)
     return x, y
+
+
+def point_in_obstacle(
+    point: tuple[float, float],
+    obstacle: ObstacleBox,
+    *,
+    clearance: float,
+) -> bool:
+    px = point[0] - obstacle.center[0]
+    py = point[1] - obstacle.center[1]
+    c = math.cos(-obstacle.yaw)
+    s = math.sin(-obstacle.yaw)
+    local_x = px * c - py * s
+    local_y = px * s + py * c
+    half_x = obstacle.size[0] / 2.0 + clearance
+    half_y = obstacle.size[1] / 2.0 + clearance
+    return abs(local_x) <= half_x and abs(local_y) <= half_y
+
+
+def point_is_navigable(
+    point: tuple[float, float],
+    *,
+    obstacles: list[ObstacleBox],
+    arena_half_extent: float,
+    formation_radius: float,
+) -> bool:
+    limit = arena_half_extent - formation_radius
+    if abs(point[0]) > limit or abs(point[1]) > limit:
+        return False
+    return not any(point_in_obstacle(point, obstacle, clearance=formation_radius) for obstacle in obstacles)
+
+
+def segment_is_clear(
+    start: tuple[float, float],
+    goal: tuple[float, float],
+    *,
+    obstacles: list[ObstacleBox],
+    arena_half_extent: float,
+    formation_radius: float,
+    sample_step: float = 0.03,
+) -> bool:
+    distance = math.hypot(goal[0] - start[0], goal[1] - start[1])
+    samples = max(2, int(math.ceil(distance / sample_step)) + 1)
+    for index in range(samples):
+        t = index / (samples - 1)
+        point = (
+            start[0] + (goal[0] - start[0]) * t,
+            start[1] + (goal[1] - start[1]) * t,
+        )
+        if not point_is_navigable(
+            point,
+            obstacles=obstacles,
+            arena_half_extent=arena_half_extent,
+            formation_radius=formation_radius,
+        ):
+            return False
+    return True
+
+
+def _grid_neighbors(node: tuple[int, int]) -> list[tuple[int, int]]:
+    x, y = node
+    return [
+        (x + dx, y + dy)
+        for dx in (-1, 0, 1)
+        for dy in (-1, 0, 1)
+        if not (dx == 0 and dy == 0)
+    ]
+
+
+def _node_to_point(node: tuple[int, int], *, arena_half_extent: float, grid_resolution: float) -> tuple[float, float]:
+    return (
+        -arena_half_extent + node[0] * grid_resolution,
+        -arena_half_extent + node[1] * grid_resolution,
+    )
+
+
+def _point_to_node(point: tuple[float, float], *, arena_half_extent: float, grid_resolution: float) -> tuple[int, int]:
+    return (
+        int(round((point[0] + arena_half_extent) / grid_resolution)),
+        int(round((point[1] + arena_half_extent) / grid_resolution)),
+    )
+
+
+def _smooth_path(
+    path: list[tuple[float, float]],
+    *,
+    obstacles: list[ObstacleBox],
+    arena_half_extent: float,
+    formation_radius: float,
+) -> list[tuple[float, float]]:
+    if len(path) <= 2:
+        return path
+    smoothed = [path[0]]
+    index = 0
+    while index < len(path) - 1:
+        look_ahead = len(path) - 1
+        while look_ahead > index + 1:
+            if segment_is_clear(
+                path[index],
+                path[look_ahead],
+                obstacles=obstacles,
+                arena_half_extent=arena_half_extent,
+                formation_radius=formation_radius,
+            ):
+                break
+            look_ahead -= 1
+        smoothed.append(path[look_ahead])
+        index = look_ahead
+    return smoothed
+
+
+def plan_team_path(
+    *,
+    start: tuple[float, float],
+    goal: tuple[float, float],
+    obstacles: list[ObstacleBox],
+    arena_half_extent: float,
+    formation_radius: float,
+    grid_resolution: float = 0.05,
+) -> list[tuple[float, float]]:
+    if segment_is_clear(
+        start,
+        goal,
+        obstacles=obstacles,
+        arena_half_extent=arena_half_extent,
+        formation_radius=formation_radius,
+    ):
+        return [start, goal]
+
+    max_index = int(round((2.0 * arena_half_extent) / grid_resolution))
+    start_node = _point_to_node(start, arena_half_extent=arena_half_extent, grid_resolution=grid_resolution)
+    goal_node = _point_to_node(goal, arena_half_extent=arena_half_extent, grid_resolution=grid_resolution)
+
+    def node_valid(node: tuple[int, int]) -> bool:
+        if node[0] < 0 or node[1] < 0 or node[0] > max_index or node[1] > max_index:
+            return False
+        point = _node_to_point(node, arena_half_extent=arena_half_extent, grid_resolution=grid_resolution)
+        return point_is_navigable(
+            point,
+            obstacles=obstacles,
+            arena_half_extent=arena_half_extent,
+            formation_radius=formation_radius,
+        )
+
+    frontier: list[tuple[float, tuple[int, int]]] = []
+    heapq.heappush(frontier, (0.0, start_node))
+    came_from: dict[tuple[int, int], tuple[int, int] | None] = {start_node: None}
+    cost_so_far: dict[tuple[int, int], float] = {start_node: 0.0}
+
+    while frontier:
+        _, current = heapq.heappop(frontier)
+        if current == goal_node:
+            break
+        for neighbor in _grid_neighbors(current):
+            if not node_valid(neighbor):
+                continue
+            step_cost = math.hypot(neighbor[0] - current[0], neighbor[1] - current[1])
+            new_cost = cost_so_far[current] + step_cost
+            if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
+                cost_so_far[neighbor] = new_cost
+                heuristic = math.hypot(goal_node[0] - neighbor[0], goal_node[1] - neighbor[1])
+                heapq.heappush(frontier, (new_cost + heuristic, neighbor))
+                came_from[neighbor] = current
+
+    if goal_node not in came_from:
+        return [start, goal]
+
+    nodes: list[tuple[int, int]] = []
+    current = goal_node
+    while current is not None:
+        nodes.append(current)
+        current = came_from[current]
+    nodes.reverse()
+
+    path = [start]
+    for node in nodes[1:-1]:
+        path.append(_node_to_point(node, arena_half_extent=arena_half_extent, grid_resolution=grid_resolution))
+    path.append(goal)
+    return _smooth_path(
+        path,
+        obstacles=obstacles,
+        arena_half_extent=arena_half_extent,
+        formation_radius=formation_radius,
+    )
 
 
 def role_target_position(
