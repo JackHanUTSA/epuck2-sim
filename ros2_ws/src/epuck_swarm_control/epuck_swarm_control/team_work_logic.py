@@ -16,6 +16,7 @@ class TeamInterfaceConfig:
     robots: list[RobotConfig] = field(default_factory=list)
     camera_source: str = ''
     startup_command: str = ''
+    webots_command: str = ''
 
 
 @dataclass(frozen=True)
