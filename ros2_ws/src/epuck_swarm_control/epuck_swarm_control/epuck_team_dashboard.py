@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 from dataclasses import asdict
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -34,12 +33,6 @@ DEFAULT_ROBOTS = [
     RobotConfig(name='epuck4', ip='192.168.0.104'),
 ]
 
-DEFAULT_WEBOTS_WORLD = Path(__file__).resolve().parents[4] / 'worlds/epuck2_dreamer_team_4_capture.wbt'
-
-
-def default_webots_command() -> str:
-    return f"webots {shlex.quote(str(DEFAULT_WEBOTS_WORLD))}"
-
 
 class EpuckTeamDashboardNode(Node):
     def __init__(self) -> None:
@@ -61,8 +54,6 @@ class EpuckTeamDashboardNode(Node):
         self._camera_frame_jpeg: bytes | None = None
         self.startup_process: subprocess.Popen[str] | None = None
         self.startup_status = 'System not started.'
-        self.webots_process: subprocess.Popen[str] | None = None
-        self.webots_status = 'Webots not started.'
 
         self.team_config = self._load_or_default_config()
         self.cmd_publishers: dict[str, Any] = {}
@@ -81,12 +72,7 @@ class EpuckTeamDashboardNode(Node):
 
     def _load_or_default_config(self) -> TeamInterfaceConfig:
         if not self.config_path.exists():
-            config = TeamInterfaceConfig(
-                robots=list(DEFAULT_ROBOTS),
-                camera_source='',
-                startup_command='',
-                webots_command=default_webots_command(),
-            )
+            config = TeamInterfaceConfig(robots=list(DEFAULT_ROBOTS), camera_source='', startup_command='')
             self._save_config(config)
             return config
         try:
@@ -98,23 +84,16 @@ class EpuckTeamDashboardNode(Node):
                 robots=robots,
                 camera_source=payload.get('camera_source', ''),
                 startup_command=payload.get('startup_command', ''),
-                webots_command=payload.get('webots_command', default_webots_command()),
             )
         except Exception as exc:
             self.get_logger().warning(f'Failed to load config {self.config_path}: {exc}')
-            return TeamInterfaceConfig(
-                robots=list(DEFAULT_ROBOTS),
-                camera_source='',
-                startup_command='',
-                webots_command=default_webots_command(),
-            )
+            return TeamInterfaceConfig(robots=list(DEFAULT_ROBOTS), camera_source='', startup_command='')
 
     def _save_config(self, config: TeamInterfaceConfig) -> None:
         payload = {
             'robots': [asdict(robot) for robot in config.robots],
             'camera_source': config.camera_source,
             'startup_command': config.startup_command,
-            'webots_command': config.webots_command,
         }
         self.config_path.write_text(json.dumps(payload, indent=2))
 
@@ -136,7 +115,6 @@ class EpuckTeamDashboardNode(Node):
             robots=robots,
             camera_source=form_data.get('camera_source', '').strip(),
             startup_command=form_data.get('startup_command', '').strip(),
-            webots_command=form_data.get('webots_command', '').strip() or default_webots_command(),
         )
         errors = validate_robot_configs(config)
         with self._lock:
@@ -191,36 +169,6 @@ class EpuckTeamDashboardNode(Node):
         self.get_logger().info(f'Launched startup command: {command}')
         return True
 
-    def start_webots(self) -> bool:
-        with self._lock:
-            command = self.team_config.webots_command.strip()
-            running = self.webots_process is not None and self.webots_process.poll() is None
-        if running:
-            with self._lock:
-                self.webots_status = 'Webots simulation is already running.'
-            return True
-        if not command:
-            with self._lock:
-                self.webots_status = 'No Webots command configured.'
-            return False
-        try:
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
-        except Exception as exc:
-            with self._lock:
-                self.webots_status = f'Webots launch failed: {exc}'
-            return False
-        with self._lock:
-            self.webots_process = process
-            self.webots_status = f'Webots launch started: {command}'
-        self.get_logger().info(f'Launched Webots command: {command}')
-        return True
-
     def check_connections(self) -> dict[str, bool]:
         results: dict[str, bool] = {}
         with self._lock:
@@ -269,7 +217,6 @@ class EpuckTeamDashboardNode(Node):
                 'robots': robots,
                 'camera_source': self.team_config.camera_source,
                 'startup_command': self.team_config.startup_command,
-                'webots_command': self.team_config.webots_command,
                 'last_command': self.last_command,
                 'errors': list(self.last_errors),
                 'connection_summary': {
@@ -280,7 +227,6 @@ class EpuckTeamDashboardNode(Node):
                 },
                 'camera_status': self.last_camera_status,
                 'startup_status': self.startup_status,
-                'webots_status': self.webots_status,
                 'has_camera_frame': self._camera_frame_jpeg is not None,
             }
 
@@ -327,9 +273,6 @@ class EpuckTeamDashboardNode(Node):
                 elif parsed.path == '/start':
                     node.apply_config_update(form)
                     node.start_system()
-                elif parsed.path == '/start_webots':
-                    node.apply_config_update(form)
-                    node.start_webots()
                 elif parsed.path == '/command':
                     node.apply_config_update(form)
                     order = form.get('order', 'stop')
@@ -384,7 +327,6 @@ def render_dashboard_html(state: dict[str, Any]) -> str:
     <p><strong>Last team order:</strong> {state['last_command']}</p>
     <p><strong>Camera status:</strong> {state['camera_status']}</p>
     <p><strong>Startup status:</strong> {state['startup_status']}</p>
-    <p><strong>Webots status:</strong> {state['webots_status']}</p>
   </div>
 
   <form method='post'>
@@ -398,13 +340,10 @@ def render_dashboard_html(state: dict[str, Any]) -> str:
       <input name='camera_source' value='{state['camera_source']}' placeholder='rtsp://... or 0'/>
       <p><strong>System startup command</strong> (local shell command for full bring-up)</p>
       <input name='startup_command' value='{state['startup_command']}' placeholder='ros2 launch your_pkg your_bringup.launch.py'/>
-      <p><strong>Webots simulation command</strong> (local shell command to launch the simulation)</p>
-      <input name='webots_command' value='{state['webots_command']}' placeholder='webots /path/to/world.wbt'/>
       <p>Use names that match your ROS namespaces, for example epuck1, epuck2, epuck3, epuck4.</p>
       <button formaction='/save' type='submit'>Save configuration</button>
       <button formaction='/check' type='submit'>Check robots + camera</button>
       <button formaction='/start' type='submit'>Start System</button>
-      <button formaction='/start_webots' type='submit'>Run Webots Simulation</button>
     </div>
 
     <div class='panel'>
