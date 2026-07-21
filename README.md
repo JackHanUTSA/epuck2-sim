@@ -24,6 +24,14 @@ This repository combines three related workflows for e-puck2 robots:
 - optionally connect a top camera
 - launch the full robot stack from the dashboard
 
+## Beginner guide
+
+For first-time students, start with:
+- `docs/epuck2-beginner-guide.pdf`
+- source: `docs/epuck2-beginner-guide.tex`
+
+The guide explicitly recommends **Webots** for simulation-first learning, includes the official GCtronic e-puck2 link, and provides tiny starter code examples for forward motion, turning, stopping, and first reactive obstacle avoidance.
+
 ## Quick start
 
 Single-robot Webots demo:

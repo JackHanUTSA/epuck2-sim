@@ -36,6 +36,11 @@ camera_tests/
 view_tests/
 topdown_frames/
 
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+
 # OS/editor
 .DS_Store
 *.swp

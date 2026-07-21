@@ -1,0 +1,247 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\setlist[itemize]{leftmargin=1.2em}
+\setlist[enumerate]{leftmargin=1.4em}
+\titleformat{\section}{\Large\bfseries\color{blue!60!black}}{}{0em}{}
+\titleformat{\subsection}{\large\bfseries\color{blue!50!black}}{}{0em}{}
+\title{e-puck2 Beginner Guide\\\large First Steps for New Students}
+\author{Prepared for Jack}
+\date{July 21, 2026}
+
+\begin{document}
+\maketitle
+
+\section*{Official starter link}
+The main official GCtronic e-puck2 guide is:
+\begin{itemize}
+  \item \url{https://www.gctronic.com/doc/index.php?title=e-puck2}
+\end{itemize}
+Start there for manufacturer documentation, then use this beginner guide as the practical first-day roadmap.
+
+\section{What the e-puck2 is}
+The e-puck2 is a small differential-drive mobile robot used for robotics education and research. It is useful for teaching:
+\begin{itemize}
+  \item basic programming,
+  \item sensing and feedback,
+  \item obstacle avoidance,
+  \item control and estimation,
+  \item multi-robot experiments.
+\end{itemize}
+
+For a beginner, the most important mental model is simple: the robot moves because its \textbf{left and right wheels} move at chosen speeds. If both wheels move equally, it goes roughly straight. If one wheel moves faster, it turns.
+
+\section{What beginners should learn first}
+Before writing advanced code, every student should be able to explain:
+\begin{enumerate}
+  \item where the robot's forward direction is,
+  \item which wheels create turning,
+  \item what the proximity sensors are for,
+  \item why simulation should come before real-hardware testing,
+  \item how to stop a bad experiment quickly.
+\end{enumerate}
+
+\section{Safety rules for first-time users}
+Use these rules every time:
+\begin{itemize}
+  \item Start in simulation whenever possible.
+  \item Keep the robot on an open surface with space around it.
+  \item Use low speeds for first tests.
+  \item Test one change at a time.
+  \item Be ready to lift the robot or switch it off if motion is wrong.
+  \item Never run a new controller at full speed first.
+  \item Do not assume sensor readings are perfect.
+\end{itemize}
+
+\section{Recommended learning order}
+A beginner-friendly order is:
+\begin{enumerate}
+  \item Understand the robot body, wheels, and basic sensors.
+  \item Run a simple e-puck2 simulation.
+  \item Try open-loop motion: forward, stop, turn.
+  \item Read sensor values.
+  \item Build a simple obstacle-avoidance behavior.
+  \item Only then move to the real robot.
+\end{enumerate}
+
+\section{Which simulation software to use}
+For beginners, use \textbf{Webots} as the main simulation software. It is the most natural first choice for e-puck2 learning because it already supports mobile-robot simulation well and is widely used for educational robotics workflows.
+
+Recommended links:
+\begin{itemize}
+  \item Webots getting started guide: \href{https://cyberbotics.com/doc/guide/getting-started-with-webots?version=R2025a}{Cyberbotics Webots guide}
+  \item GCtronic e-puck2 page: \href{https://www.gctronic.com/doc/index.php?title=e-puck2}{Official e-puck2 wiki}
+\end{itemize}
+
+A simple beginner workflow is:
+\begin{enumerate}
+  \item Install and open Webots.
+  \item Load an e-puck2 world or example project.
+  \item Run the simulation and watch how the robot moves.
+  \item Change a small controller constant.
+  \item Re-run and confirm the behavior changed.
+  \item Only after the simulation behaves well, try the same idea on the real robot at lower speed.
+\end{enumerate}
+
+\section{Basic starter code}
+Students should not start with a large project. Start with a tiny controller that moves forward, turns, and stops. Even pseudocode-level understanding is useful on day one.
+
+Example beginner Python-style controller logic:
+\begin{verbatim}
+# basic idea: move forward for a while, then turn, then stop
+
+left_speed = 2.0
+right_speed = 2.0
+
+# drive forward
+set_wheels(left_speed, right_speed)
+wait(2.0)
+
+# turn in place
+set_wheels(-1.5, 1.5)
+wait(1.0)
+
+# stop
+set_wheels(0.0, 0.0)
+\end{verbatim}
+
+What this teaches:
+\begin{itemize}
+  \item equal wheel speeds produce roughly straight motion,
+  \item opposite wheel directions produce an in-place turn,
+  \item stopping is just setting both wheels to zero.
+\end{itemize}
+
+A first reactive behavior can be explained like this:
+\begin{verbatim}
+front_sensor = read_front_proximity()
+
+if front_sensor > threshold:
+    set_wheels(-1.0, 1.0)   # turn away
+else:
+    set_wheels(2.0, 2.0)    # move forward
+\end{verbatim}
+
+This is enough to introduce the idea of \textbf{sense -> decide -> act}, which is the core robotics loop beginners need to understand.
+
+\section{Connection modes beginners should know}
+The e-puck2 can be used in several connection modes. For beginners, use \textbf{USB first}. It removes unnecessary wireless debugging problems.
+
+\subsection{USB: recommended first path}
+\begin{itemize}
+  \item Selector position: \textbf{8}
+  \item Why use it first: simplest setup and easiest debugging
+  \item Common Linux device names: \texttt{/dev/ttyACM0}, \texttt{/dev/ttyACM1}, \texttt{/dev/ttyACM2}
+\end{itemize}
+
+Typical first-use sequence:
+\begin{enumerate}
+  \item Set the selector to \textbf{8}.
+  \item Connect one micro-USB cable.
+  \item Turn the robot on.
+  \item On Linux, make sure the user has serial permission if needed:
+\begin{verbatim}
+sudo adduser $USER dialout
+\end{verbatim}
+  \item Log out and back in if the group was changed.
+  \item Check whether serial devices appeared:
+\begin{verbatim}
+ls /dev/ttyACM*
+\end{verbatim}
+\end{enumerate}
+
+\subsection{Bluetooth}
+\begin{itemize}
+  \item Selector position: \textbf{3}
+  \item Usually not the best first choice for beginners on Linux
+  \item Can work well later, but pairing and serial binding add extra steps
+\end{itemize}
+
+\subsection{WiFi}
+\begin{itemize}
+  \item Selector position: \textbf{15 (F)}
+  \item Good when untethered control is needed
+  \item Requires the correct WiFi firmware and network configuration
+\end{itemize}
+
+If the robot has no saved WiFi settings, it can create its own access point. A common first setup flow is:
+\begin{enumerate}
+  \item Set selector to \textbf{15 (F)}.
+  \item Connect to the robot SSID \texttt{e-puck2\_0XXXX}.
+  \item Use password \texttt{e-puck2robot}.
+  \item Open \url{http://192.168.1.1}.
+  \item Save the desired WiFi network credentials.
+  \item Power-cycle the robot once.
+\end{enumerate}
+
+\section{What to test on day one}
+A good first-day progression is:
+\begin{enumerate}
+  \item Connect to the robot over USB.
+  \item Confirm the host computer can see the robot.
+  \item Read sensor values without moving the robot.
+  \item Blink an LED or perform another harmless check.
+  \item Command a tiny forward motion.
+  \item Command a tiny turn.
+  \item Stop and write down what happened.
+\end{enumerate}
+
+\section{Simple beginner experiments}
+These are appropriate first experiments:
+\begin{itemize}
+  \item Drive straight for a short time.
+  \item Turn left and right in place slowly.
+  \item Stop when a front obstacle is detected.
+  \item Compare left and right proximity readings near a wall.
+  \item Run the same controller in simulation and then on the real robot at lower speed.
+\end{itemize}
+
+\section{Common beginner mistakes}
+Watch for these:
+\begin{itemize}
+  \item Going to real hardware too early.
+  \item Testing at high speed first.
+  \item Making many code changes before the next run.
+  \item Forgetting to check selector position.
+  \item Using a charge-only USB cable.
+  \item Assuming USB port numbering will always stay the same.
+  \item Confusing Bluetooth mode with WiFi mode.
+\end{itemize}
+
+\section{What students should record in their lab notes}
+For each run, write down:
+\begin{itemize}
+  \item date and robot ID,
+  \item connection mode used,
+  \item code version or script name,
+  \item speed settings,
+  \item expected behavior,
+  \item actual behavior,
+  \item next change to try.
+\end{itemize}
+
+\section{A practical beginner checklist}
+Before saying ``the robot is working,'' verify these basics:
+\begin{itemize}
+  \item the selector is in the intended position,
+  \item the robot powers on correctly,
+  \item the host computer detects the device or network endpoint,
+  \item a sensor read succeeds,
+  \item a tiny motion command works,
+  \item the robot can be stopped safely.
+\end{itemize}
+
+\section{Bottom line}
+For beginners, the right workflow is:\
+\textbf{learn the robot body \textrightarrow{} start in simulation \textrightarrow{} connect over USB \textrightarrow{} verify sensing \textrightarrow{} try tiny motions \textrightarrow{} only then attempt more advanced behaviors.}
+
+That sequence prevents most frustrating first-day failures and gives students a clean path from curiosity to safe real-robot control.
+
+\end{document}
