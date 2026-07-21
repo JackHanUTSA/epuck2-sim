@@ -130,6 +130,20 @@ def mark_sensor_observations(
         state.mark_occupied(*hit_cell)
 
 
+def save_map_frame(
+    state: MappingState,
+    output_dir: str | Path,
+    frame_index: int,
+    pose: Pose2D | None = None,
+    scale: int = 4,
+) -> Path:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    frame_path = output_dir / f"frame_{frame_index:04d}.png"
+    save_map_image(state, frame_path, pose=pose, scale=scale)
+    return frame_path
+
+
 def save_map_image(state: MappingState, output_path: str | Path, pose: Pose2D | None = None, scale: int = 4):
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)

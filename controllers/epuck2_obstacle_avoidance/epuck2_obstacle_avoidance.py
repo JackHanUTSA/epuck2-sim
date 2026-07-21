@@ -20,7 +20,14 @@ import os
 from controller import Robot
 
 from obstacle_avoidance_logic import AvoidanceState, MAX_SPEED, compute_wheel_speeds
-from obstacle_mapping import MappingState, Pose2D, mark_sensor_observations, save_map_image, update_pose
+from obstacle_mapping import (
+    MappingState,
+    Pose2D,
+    mark_sensor_observations,
+    save_map_frame,
+    save_map_image,
+    update_pose,
+)
 
 # --- Constants ---
 TIME_STEP = 16          # ms, matches world basicTimeStep
@@ -63,9 +70,13 @@ def main():
     mapping_state = MappingState(width=160, height=160, meters_per_cell=0.01)
     pose = Pose2D(x=0.0, y=0.0, theta=0.0)
     map_output_path = os.environ.get("EPUCK_MAP_OUTPUT", DEFAULT_MAP_OUTPUT)
+    map_record_dir = os.environ.get("EPUCK_MAP_RECORD_DIR")
     save_period = int(os.environ.get("EPUCK_MAP_SAVE_EVERY_STEPS", str(MAP_SAVE_EVERY_STEPS)))
     dt = TIME_STEP / 1000.0
+    map_frame_index = 0
     print(f"[e-puck2] Mapping output: {map_output_path}")
+    if map_record_dir:
+        print(f"[e-puck2] Mapping frame dir: {map_record_dir}")
     
     # --- Main loop ---
     while robot.step(TIME_STEP) != -1:
@@ -105,9 +116,16 @@ def main():
         if save_period > 0 and step_count % save_period == 0:
             save_map_image(mapping_state, map_output_path, pose)
             print(f"[e-puck2] Saved occupancy map to {map_output_path}")
+            if map_record_dir:
+                frame_path = save_map_frame(mapping_state, map_record_dir, map_frame_index, pose)
+                print(f"[e-puck2] Saved mapping frame to {frame_path}")
+                map_frame_index += 1
 
     save_map_image(mapping_state, map_output_path, pose)
     print(f"[e-puck2] Final occupancy map saved to {map_output_path}")
+    if map_record_dir:
+        frame_path = save_map_frame(mapping_state, map_record_dir, map_frame_index, pose)
+        print(f"[e-puck2] Saved final mapping frame to {frame_path}")
 
 
 if __name__ == "__main__":

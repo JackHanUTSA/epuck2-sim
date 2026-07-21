@@ -12,6 +12,7 @@ from obstacle_mapping import (  # noqa: E402
     MappingState,
     Pose2D,
     mark_sensor_observations,
+    save_map_frame,
     save_map_image,
     update_pose,
 )
@@ -49,6 +50,17 @@ class EPuckObstacleMappingTests(unittest.TestCase):
             save_map_image(state, output_path)
             self.assertTrue(output_path.exists())
             self.assertGreater(output_path.stat().st_size, 0)
+
+    def test_save_map_frame_writes_numbered_frame(self):
+        state = MappingState(width=40, height=40, meters_per_cell=0.01)
+        pose = Pose2D(x=0.0, y=0.0, theta=0.0)
+        mark_sensor_observations(state, pose, [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            frame_path = save_map_frame(state, tmpdir, frame_index=7, pose=pose)
+            self.assertEqual(frame_path.name, "frame_0007.png")
+            self.assertTrue(frame_path.exists())
+            self.assertGreater(frame_path.stat().st_size, 0)
 
 
 if __name__ == "__main__":
