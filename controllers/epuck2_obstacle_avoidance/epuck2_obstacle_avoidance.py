@@ -17,32 +17,12 @@ ps0/ps7 = front, ps2 = left, ps5 = right, ps3/ps4 = rear
 
 from controller import Robot
 
+from obstacle_avoidance_logic import MAX_SPEED, compute_wheel_speeds
+
 # --- Constants ---
 TIME_STEP = 16          # ms, matches world basicTimeStep
-MAX_SPEED = 6.28        # rad/s (e-puck max)
 NUM_SENSORS = 8
 SENSOR_NAMES = [f"ps{i}" for i in range(NUM_SENSORS)]
-
-# Braitenberg weight matrix: [sensor] -> (left_weight, right_weight)
-# Positive = excite that wheel, negative = inhibit
-# Tuned so front/front-left obstacles steer right and vice versa
-WEIGHTS = [
-    (-1.3, -1.0),   # ps0 - front-right
-    (-1.3, -1.0),   # ps1 - front-right-45
-    (-0.5,  0.5),   # ps2 - right
-    ( 0.0,  0.0),   # ps3 - rear-right
-    ( 0.0,  0.0),   # ps4 - rear-left
-    ( 0.5, -0.5),   # ps5 - left
-    (-1.0, -1.3),   # ps6 - front-left-45
-    (-1.0, -1.3),   # ps7 - front-left
-]
-
-# Base forward speed (fraction of MAX_SPEED)
-BASE_SPEED = 0.5 * MAX_SPEED
-
-
-def clamp(value, lo, hi):
-    return max(lo, min(hi, value))
 
 
 def main():
@@ -82,18 +62,10 @@ def main():
         
         # Normalize to [0, 1]
         normalized = [v / 4096.0 for v in values]
-        
-        # Compute wheel speeds via Braitenberg
-        left_speed = BASE_SPEED
-        right_speed = BASE_SPEED
-        
-        for i in range(NUM_SENSORS):
-            left_speed  += normalized[i] * WEIGHTS[i][0] * MAX_SPEED
-            right_speed += normalized[i] * WEIGHTS[i][1] * MAX_SPEED
-        
-        # Clamp
-        left_speed  = clamp(left_speed,  -MAX_SPEED, MAX_SPEED)
-        right_speed = clamp(right_speed, -MAX_SPEED, MAX_SPEED)
+
+        # Compute wheel speeds. When a front wall is detected,
+        # the helper forces a right turn.
+        left_speed, right_speed = compute_wheel_speeds(normalized)
         
         # Apply
         left_motor.setVelocity(left_speed)
