@@ -63,8 +63,9 @@ def main():
         # Normalize to [0, 1]
         normalized = [v / 4096.0 for v in values]
 
-        # Compute wheel speeds. When a front wall is detected,
-        # the helper forces a right turn.
+        # Compute wheel speeds. When a wall or box is detected ahead,
+        # the helper compares left/right blockage and turns toward the
+        # more open side automatically.
         left_speed, right_speed = compute_wheel_speeds(normalized)
         
         # Apply

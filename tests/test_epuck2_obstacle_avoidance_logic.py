@@ -16,11 +16,19 @@ class EPuckObstacleAvoidanceLogicTests(unittest.TestCase):
         self.assertGreater(right, 0.0)
         self.assertAlmostEqual(left, right, places=6)
 
-    def test_front_wall_forces_right_turn(self):
-        sensors = [1.0, 0.8, 0.0, 0.0, 0.0, 0.0, 0.8, 1.0]
+    def test_front_obstacle_turns_right_when_left_side_is_more_blocked(self):
+        sensors = [1.0, 0.9, 0.8, 0.2, 0.0, 0.1, 0.2, 0.8]
         left, right = compute_wheel_speeds(sensors)
         self.assertGreater(left, right)
         self.assertGreaterEqual(left, 0.0)
+        self.assertLessEqual(abs(left), MAX_SPEED)
+        self.assertLessEqual(abs(right), MAX_SPEED)
+
+    def test_front_obstacle_turns_left_when_right_side_is_more_blocked(self):
+        sensors = [0.8, 0.2, 0.1, 0.0, 0.2, 0.8, 0.9, 1.0]
+        left, right = compute_wheel_speeds(sensors)
+        self.assertGreater(right, left)
+        self.assertGreaterEqual(right, 0.0)
         self.assertLessEqual(abs(left), MAX_SPEED)
         self.assertLessEqual(abs(right), MAX_SPEED)
 
