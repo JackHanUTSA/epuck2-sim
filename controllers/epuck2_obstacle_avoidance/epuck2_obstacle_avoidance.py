@@ -15,14 +15,19 @@ Sensor layout (top view):
 ps0/ps7 = front, ps2 = left, ps5 = right, ps3/ps4 = rear
 """
 
+import os
+
 from controller import Robot
 
 from obstacle_avoidance_logic import AvoidanceState, MAX_SPEED, compute_wheel_speeds
+from obstacle_mapping import MappingState, Pose2D, mark_sensor_observations, save_map_image, update_pose
 
 # --- Constants ---
 TIME_STEP = 16          # ms, matches world basicTimeStep
 NUM_SENSORS = 8
 SENSOR_NAMES = [f"ps{i}" for i in range(NUM_SENSORS)]
+MAP_SAVE_EVERY_STEPS = 125
+DEFAULT_MAP_OUTPUT = "/tmp/epuck2_obstacle_avoidance_map.png"
 
 
 def main():
@@ -55,6 +60,12 @@ def main():
     
     step_count = 0
     avoidance_state = AvoidanceState()
+    mapping_state = MappingState(width=160, height=160, meters_per_cell=0.01)
+    pose = Pose2D(x=0.0, y=0.0, theta=0.0)
+    map_output_path = os.environ.get("EPUCK_MAP_OUTPUT", DEFAULT_MAP_OUTPUT)
+    save_period = int(os.environ.get("EPUCK_MAP_SAVE_EVERY_STEPS", str(MAP_SAVE_EVERY_STEPS)))
+    dt = TIME_STEP / 1000.0
+    print(f"[e-puck2] Mapping output: {map_output_path}")
     
     # --- Main loop ---
     while robot.step(TIME_STEP) != -1:
@@ -68,6 +79,11 @@ def main():
         # the helper compares left/right blockage and commits to the
         # chosen open side until the front clears to avoid flip-flopping.
         left_speed, right_speed = compute_wheel_speeds(normalized, avoidance_state)
+
+        # Update the local occupancy map from the current pose and current
+        # IR observations, then integrate wheel motion for the next step.
+        mark_sensor_observations(mapping_state, pose, normalized)
+        pose = update_pose(pose, left_speed, right_speed, dt)
         
         # Apply
         left_motor.setVelocity(left_speed)
@@ -85,6 +101,13 @@ def main():
             print(f"[e-puck2] Step {step_count} | "
                   f"Front: {front_avg:.2f} | "
                   f"L: {left_speed:.2f} R: {right_speed:.2f}")
+
+        if save_period > 0 and step_count % save_period == 0:
+            save_map_image(mapping_state, map_output_path, pose)
+            print(f"[e-puck2] Saved occupancy map to {map_output_path}")
+
+    save_map_image(mapping_state, map_output_path, pose)
+    print(f"[e-puck2] Final occupancy map saved to {map_output_path}")
 
 
 if __name__ == "__main__":
