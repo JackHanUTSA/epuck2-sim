@@ -17,7 +17,7 @@ ps0/ps7 = front, ps2 = left, ps5 = right, ps3/ps4 = rear
 
 from controller import Robot
 
-from obstacle_avoidance_logic import MAX_SPEED, compute_wheel_speeds
+from obstacle_avoidance_logic import AvoidanceState, MAX_SPEED, compute_wheel_speeds
 
 # --- Constants ---
 TIME_STEP = 16          # ms, matches world basicTimeStep
@@ -54,6 +54,7 @@ def main():
     print(f"[e-puck2] Time step: {TIME_STEP}ms | Max speed: {MAX_SPEED} rad/s")
     
     step_count = 0
+    avoidance_state = AvoidanceState()
     
     # --- Main loop ---
     while robot.step(TIME_STEP) != -1:
@@ -64,9 +65,9 @@ def main():
         normalized = [v / 4096.0 for v in values]
 
         # Compute wheel speeds. When a wall or box is detected ahead,
-        # the helper compares left/right blockage and turns toward the
-        # more open side automatically.
-        left_speed, right_speed = compute_wheel_speeds(normalized)
+        # the helper compares left/right blockage and commits to the
+        # chosen open side until the front clears to avoid flip-flopping.
+        left_speed, right_speed = compute_wheel_speeds(normalized, avoidance_state)
         
         # Apply
         left_motor.setVelocity(left_speed)

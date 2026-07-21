@@ -1,7 +1,11 @@
+from dataclasses import dataclass
+
 MAX_SPEED = 6.28
 BASE_SPEED = 0.5 * MAX_SPEED
 FRONT_OBSTACLE_THRESHOLD = 0.12
 TURN_SPEED = 0.45 * MAX_SPEED
+TURN_LEFT = "left"
+TURN_RIGHT = "right"
 
 # Braitenberg weight matrix: [sensor] -> (left_weight, right_weight)
 WEIGHTS = [
@@ -17,6 +21,11 @@ WEIGHTS = [
 
 LEFT_BLOCKAGE_WEIGHTS = [1.0, 1.2, 1.0, 0.3]
 RIGHT_BLOCKAGE_WEIGHTS = [0.3, 1.0, 1.2, 1.0]
+
+
+@dataclass
+class AvoidanceState:
+    committed_turn: str | None = None
 
 
 def clamp(value, lo, hi):
@@ -35,16 +44,29 @@ def compute_side_blockage(normalized_sensors):
     return left_blockage, right_blockage
 
 
-def choose_turn_speeds(normalized_sensors):
-    left_blockage, right_blockage = compute_side_blockage(normalized_sensors)
+def choose_turn_direction(normalized_sensors, state=None):
+    if state and state.committed_turn is not None:
+        return state.committed_turn
 
-    if left_blockage <= right_blockage:
+    left_blockage, right_blockage = compute_side_blockage(normalized_sensors)
+    chosen_turn = TURN_RIGHT if left_blockage > right_blockage else TURN_LEFT
+
+    if state:
+        state.committed_turn = chosen_turn
+
+    return chosen_turn
+
+
+def choose_turn_speeds(normalized_sensors, state=None):
+    chosen_turn = choose_turn_direction(normalized_sensors, state)
+
+    if chosen_turn == TURN_LEFT:
         return -TURN_SPEED, TURN_SPEED
 
     return TURN_SPEED, -TURN_SPEED
 
 
-def compute_wheel_speeds(normalized_sensors):
+def compute_wheel_speeds(normalized_sensors, state=None):
     left_speed = BASE_SPEED
     right_speed = BASE_SPEED
 
@@ -60,7 +82,9 @@ def compute_wheel_speeds(normalized_sensors):
     )
 
     if front_obstacle >= FRONT_OBSTACLE_THRESHOLD:
-        left_speed, right_speed = choose_turn_speeds(normalized_sensors)
+        left_speed, right_speed = choose_turn_speeds(normalized_sensors, state)
+    elif state:
+        state.committed_turn = None
 
     left_speed = clamp(left_speed, -MAX_SPEED, MAX_SPEED)
     right_speed = clamp(right_speed, -MAX_SPEED, MAX_SPEED)
