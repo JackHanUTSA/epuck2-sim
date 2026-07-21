@@ -1,0 +1,86 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/WoodenBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+
+WorldInfo {
+  info [
+    "E-puck2 Obstacle Avoidance Capture - Swarmlab"
+  ]
+  title "E-puck2 Obstacle Avoidance Capture"
+  basicTimeStep 16
+}
+Viewpoint {
+  orientation -0.56 0.04 0.83 3.15
+  position 0.0 -0.05 1.8
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 1 1
+  wallHeight 0.05
+}
+WoodenBox {
+  translation -0.25 0.15 0.025
+  rotation 0 0 1 0.5
+  size 0.05 0.05 0.05
+}
+WoodenBox {
+  translation 0.2 0.35 0.025
+  rotation 0 0 1 1.2
+  name "wooden box(1)"
+  size 0.05 0.05 0.05
+}
+WoodenBox {
+  translation -0.15 -0.3 0.025
+  rotation 0 0 1 0.8
+  name "wooden box(2)"
+  size 0.05 0.05 0.05
+}
+WoodenBox {
+  translation 0.3 -0.1 0.025
+  rotation 0 0 1 2.1
+  name "wooden box(3)"
+  size 0.05 0.05 0.05
+}
+WoodenBox {
+  translation -0.35 -0.1 0.025
+  rotation 0 0 1 0.3
+  name "wooden box(4)"
+  size 0.05 0.05 0.05
+}
+WoodenBox {
+  translation 0.1 -0.35 0.025
+  rotation 0 0 1 1.5
+  name "wooden box(5)"
+  size 0.05 0.05 0.05
+}
+E-puck {
+  translation 0 0 0
+  rotation 0 0 1 1.57
+  name "e-puck2"
+  controller "epuck2_obstacle_avoidance"
+  version "2"
+}
+Robot {
+  translation 0 -10 0
+  children [
+    Camera {
+      name "overhead_camera"
+      width 1280
+      height 720
+      fieldOfView 1.2
+      near 0.01
+      far 20
+      antiAliasing TRUE
+    }
+  ]
+  name "swarm_capture_supervisor"
+  controller "swarm_capture_supervisor"
+  supervisor TRUE
+}

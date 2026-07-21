@@ -40,6 +40,15 @@ Single-robot Webots demo:
 webots /home/jack/swarmlab/projects/epuck2-sim/worlds/epuck2_obstacle_avoidance.wbt
 ```
 
+Top-center verification capture for e-puck Webots runs:
+
+```bash
+cd /home/jack/swarmlab/projects/epuck2-sim
+./scripts/capture_epuck_topview.sh worlds/epuck2_obstacle_avoidance.wbt /tmp/epuck2_obstacle_topview.mp4
+```
+
+This uses the dedicated overhead-camera capture path so verification videos show a centered top view of the arena instead of the default perspective viewport.
+
 ROS 2 team dashboard for 4 robots:
 
 ```bash
