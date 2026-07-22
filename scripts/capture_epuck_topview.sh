@@ -9,7 +9,7 @@ fi
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORLD_INPUT="$1"
 OUTPUT_MP4="$2"
-FRAME_COUNT="${3:-220}"
+FRAME_COUNT="${3:-750}"
 
 if [[ "$WORLD_INPUT" != /* ]]; then
   WORLD_INPUT="$REPO_DIR/$WORLD_INPUT"
