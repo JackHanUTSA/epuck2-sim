@@ -23,6 +23,27 @@ class Pose2D:
 
 
 @dataclass
+class MappingCompletionTracker:
+    min_known_cells: int = 220
+    stable_growth_threshold: int = 2
+    stable_updates_required: int = 6
+    previous_known_cells: int = 0
+    stable_updates: int = 0
+
+    def update(self, state: "MappingState") -> bool:
+        known_cells = count_known_cells(state)
+        growth = max(0, known_cells - self.previous_known_cells)
+
+        if known_cells >= self.min_known_cells and growth <= self.stable_growth_threshold:
+            self.stable_updates += 1
+        else:
+            self.stable_updates = 0
+
+        self.previous_known_cells = known_cells
+        return self.stable_updates >= self.stable_updates_required
+
+
+@dataclass
 class MappingState:
     width: int = 160
     height: int = 160
@@ -62,6 +83,15 @@ class MappingState:
 
 def clamp(value: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, value))
+
+
+def count_known_cells(state: MappingState) -> int:
+    return sum(
+        1
+        for row in state.grid
+        for value in row
+        if value != state.UNKNOWN
+    )
 
 
 def normalize_angle(theta: float) -> float:

@@ -2,14 +2,24 @@
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
-  echo "usage: $0 WORLD_FILE OUTPUT_MP4 [frame_count]" >&2
+  echo "usage: $0 WORLD_FILE OUTPUT_MP4 [frame_count|auto]" >&2
   exit 2
 fi
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORLD_INPUT="$1"
 OUTPUT_MP4="$2"
-FRAME_COUNT="${3:-750}"
+FRAME_MODE="${3:-auto}"
+MAX_FRAME_COUNT="${EPUCK_MAX_FRAME_COUNT:-5000}"
+MIN_AUTO_FRAMES="${EPUCK_MIN_AUTO_FRAMES:-300}"
+
+if [[ "$FRAME_MODE" == "auto" ]]; then
+  FRAME_COUNT="$MAX_FRAME_COUNT"
+  AUTO_STOP=1
+else
+  FRAME_COUNT="$FRAME_MODE"
+  AUTO_STOP=0
+fi
 
 if [[ "$WORLD_INPUT" != /* ]]; then
   WORLD_INPUT="$REPO_DIR/$WORLD_INPUT"
@@ -25,6 +35,7 @@ out_dir="$(mktemp -d /tmp/${world_base}_topview_XXXXXX)"
 frames_dir="$out_dir/frames"
 map_frames_dir="$out_dir/map_frames"
 map_png="$out_dir/occupancy_map.png"
+map_done_file="$out_dir/mapping_done.txt"
 mkdir -p "$frames_dir"
 
 capture_world="$WORLD_INPUT"
@@ -32,17 +43,28 @@ if [[ "$world_base" == "epuck2_obstacle_avoidance" ]]; then
   capture_world="$REPO_DIR/worlds/epuck2_obstacle_avoidance_capture.wbt"
 fi
 
-EPUCK_MAP_OUTPUT="$map_png" \
-EPUCK_MAP_RECORD_DIR="$map_frames_dir" \
-EPUCK_MAP_SAVE_EVERY_STEPS="${EPUCK_MAP_SAVE_EVERY_STEPS:-25}" \
-SWARM_CAPTURE_MODE=camera_sequence \
-SWARM_CAPTURE_DIR="$frames_dir" \
-SWARM_FRAME_COUNT="$FRAME_COUNT" \
-SWARM_FRAME_STRIDE=2 \
-SWARM_SETTLE_STEPS=60 \
-SWARM_CAMERA_TRANSLATION='0,0,1.6' \
-SWARM_CAMERA_ROTATION='0,1,0,1.5708' \
-"$REPO_DIR/scripts/launch_webots_headless.sh" "$capture_world" --batch --mode=realtime --stdout --stderr >"$out_dir/webots_capture.log" 2>&1
+stop_env=()
+if [[ "$AUTO_STOP" == "1" ]]; then
+  stop_env=(
+    EPUCK_MAP_DONE_FILE="$map_done_file"
+    SWARM_STOP_FILE="$map_done_file"
+    SWARM_MIN_FRAMES_BEFORE_STOP="$MIN_AUTO_FRAMES"
+  )
+fi
+
+env \
+  EPUCK_MAP_OUTPUT="$map_png" \
+  EPUCK_MAP_RECORD_DIR="$map_frames_dir" \
+  EPUCK_MAP_SAVE_EVERY_STEPS="${EPUCK_MAP_SAVE_EVERY_STEPS:-25}" \
+  "${stop_env[@]}" \
+  SWARM_CAPTURE_MODE=camera_sequence \
+  SWARM_CAPTURE_DIR="$frames_dir" \
+  SWARM_FRAME_COUNT="$FRAME_COUNT" \
+  SWARM_FRAME_STRIDE=2 \
+  SWARM_SETTLE_STEPS=60 \
+  SWARM_CAMERA_TRANSLATION='0,0,1.6' \
+  SWARM_CAMERA_ROTATION='0,1,0,1.5708' \
+  "$REPO_DIR/scripts/launch_webots_headless.sh" "$capture_world" --batch --mode=realtime --stdout --stderr >"$out_dir/webots_capture.log" 2>&1
 
 mkdir -p "$(dirname "$OUTPUT_MP4")"
 ffmpeg -y -framerate 25 -i "$frames_dir/frame_%04d.png" -c:v libx264 -pix_fmt yuv420p "$OUTPUT_MP4" >"$out_dir/ffmpeg_encode.log" 2>&1
@@ -66,10 +88,12 @@ ffmpeg -y -i "$OUTPUT_MP4" -vf "select=eq(n\,160)" -vframes 1 "$sample_png" >"$o
 
 cat <<EOF
 capture_world=$capture_world
+frame_mode=$FRAME_MODE
 video=$OUTPUT_MP4
 map_video=$map_video
 combined_video=$combined_video
 map_image=$map_png
+map_done_file=$map_done_file
 map_frames_dir=$map_frames_dir
 sample_frame=$sample_png
 logs=$out_dir

@@ -105,13 +105,21 @@ def main():
             out_dir.mkdir(parents=True, exist_ok=True)
             frame_count = int(os.environ.get('SWARM_FRAME_COUNT', '120'))
             stride = int(os.environ.get('SWARM_FRAME_STRIDE', '2'))
-            for frame_idx in range(frame_count):
+            stop_file_text = os.environ.get('SWARM_STOP_FILE')
+            stop_file = Path(stop_file_text) if stop_file_text else None
+            min_frames_before_stop = int(os.environ.get('SWARM_MIN_FRAMES_BEFORE_STOP', '0'))
+            frame_idx = 0
+            while frame_idx < frame_count:
                 frame_path = out_dir / f'frame_{frame_idx:04d}.png'
                 camera.saveImage(str(frame_path), 100)
+                frame_idx += 1
+                if stop_file and stop_file.exists() and frame_idx >= min_frames_before_stop:
+                    print(f'[capture] stop file detected after {frame_idx} camera frames: {stop_file}')
+                    break
                 if not run_steps(supervisor, stride):
                     supervisor.simulationQuit(0)
                     return
-            print(f'[capture] saved {frame_count} camera frames to {out_dir}')
+            print(f'[capture] saved {frame_idx} camera frames to {out_dir}')
             run_steps(supervisor, 10)
             supervisor.simulationQuit(0)
             return

@@ -9,6 +9,7 @@ if str(CONTROLLER_DIR) not in sys.path:
     sys.path.insert(0, str(CONTROLLER_DIR))
 
 from obstacle_mapping import (  # noqa: E402
+    MappingCompletionTracker,
     MappingState,
     Pose2D,
     mark_sensor_observations,
@@ -61,6 +62,18 @@ class EPuckObstacleMappingTests(unittest.TestCase):
             self.assertEqual(frame_path.name, "frame_0007.png")
             self.assertTrue(frame_path.exists())
             self.assertGreater(frame_path.stat().st_size, 0)
+
+    def test_completion_tracker_reports_done_after_stable_known_area(self):
+        tracker = MappingCompletionTracker(min_known_cells=4, stable_growth_threshold=0, stable_updates_required=3)
+        state = MappingState(width=20, height=20, meters_per_cell=0.01)
+
+        for offset in range(4):
+            state.mark_free(state.origin_x + offset, state.origin_y)
+
+        self.assertFalse(tracker.update(state))
+        self.assertFalse(tracker.update(state))
+        self.assertFalse(tracker.update(state))
+        self.assertTrue(tracker.update(state))
 
 
 if __name__ == "__main__":

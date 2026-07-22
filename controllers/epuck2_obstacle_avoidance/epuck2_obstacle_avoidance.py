@@ -16,11 +16,13 @@ ps0/ps7 = front, ps2 = left, ps5 = right, ps3/ps4 = rear
 """
 
 import os
+from pathlib import Path
 
 from controller import Robot
 
 from obstacle_avoidance_logic import AvoidanceState, MAX_SPEED, compute_wheel_speeds
 from obstacle_mapping import (
+    MappingCompletionTracker,
     MappingState,
     Pose2D,
     mark_sensor_observations,
@@ -71,12 +73,21 @@ def main():
     pose = Pose2D(x=0.0, y=0.0, theta=0.0)
     map_output_path = os.environ.get("EPUCK_MAP_OUTPUT", DEFAULT_MAP_OUTPUT)
     map_record_dir = os.environ.get("EPUCK_MAP_RECORD_DIR")
+    map_done_file = os.environ.get("EPUCK_MAP_DONE_FILE")
     save_period = int(os.environ.get("EPUCK_MAP_SAVE_EVERY_STEPS", str(MAP_SAVE_EVERY_STEPS)))
+    completion_tracker = MappingCompletionTracker(
+        min_known_cells=int(os.environ.get("EPUCK_MAP_MIN_KNOWN_CELLS", "220")),
+        stable_growth_threshold=int(os.environ.get("EPUCK_MAP_STABLE_GROWTH_THRESHOLD", "2")),
+        stable_updates_required=int(os.environ.get("EPUCK_MAP_STABLE_UPDATES_REQUIRED", "6")),
+    )
     dt = TIME_STEP / 1000.0
     map_frame_index = 0
+    mapping_complete = False
     print(f"[e-puck2] Mapping output: {map_output_path}")
     if map_record_dir:
         print(f"[e-puck2] Mapping frame dir: {map_record_dir}")
+    if map_done_file:
+        print(f"[e-puck2] Mapping done flag: {map_done_file}")
     
     # --- Main loop ---
     while robot.step(TIME_STEP) != -1:
@@ -121,11 +132,25 @@ def main():
                 print(f"[e-puck2] Saved mapping frame to {frame_path}")
                 map_frame_index += 1
 
+            if completion_tracker.update(mapping_state):
+                mapping_complete = True
+                print(f"[e-puck2] Mapping completion detected at step {step_count}")
+                if map_done_file:
+                    done_path = Path(map_done_file)
+                    done_path.parent.mkdir(parents=True, exist_ok=True)
+                    done_path.write_text(f"step={step_count}\n")
+                    print(f"[e-puck2] Wrote mapping done flag to {done_path}")
+                left_motor.setVelocity(0.0)
+                right_motor.setVelocity(0.0)
+                break
+
     save_map_image(mapping_state, map_output_path, pose)
     print(f"[e-puck2] Final occupancy map saved to {map_output_path}")
     if map_record_dir:
         frame_path = save_map_frame(mapping_state, map_record_dir, map_frame_index, pose)
         print(f"[e-puck2] Saved final mapping frame to {frame_path}")
+    if mapping_complete:
+        print("[e-puck2] Mapping run finished automatically.")
 
 
 if __name__ == "__main__":
