@@ -9,7 +9,11 @@ if str(CONTROLLER_DIR) not in sys.path:
 from obstacle_avoidance_logic import (  # noqa: E402
     AvoidanceState,
     MAX_SPEED,
+    Pose2D,
+    WaypointNavigatorState,
+    build_lawnmower_waypoints,
     compute_wheel_speeds,
+    compute_goal_tracking_speeds,
 )
 
 
@@ -50,6 +54,35 @@ class EPuckObstacleAvoidanceLogicTests(unittest.TestCase):
 
         self.assertGreater(first_left, first_right)
         self.assertGreater(second_left, second_right)
+
+    def test_goal_tracking_turns_left_toward_upper_target(self):
+        pose = Pose2D(x=0.0, y=0.0, theta=0.0)
+        left, right = compute_goal_tracking_speeds(pose, (0.2, 0.2))
+        self.assertGreater(right, left)
+        self.assertGreater(right, 0.0)
+
+    def test_navigation_waypoints_advance_after_target_reached(self):
+        navigator = WaypointNavigatorState(waypoints=build_lawnmower_waypoints(arena_half_extent=0.3, lane_spacing=0.15))
+        first_target = navigator.current_target()
+        pose = Pose2D(x=first_target[0], y=first_target[1], theta=0.0)
+
+        compute_wheel_speeds([0.0] * 8, pose=pose, navigation_state=navigator)
+
+        self.assertNotEqual(navigator.current_target(), first_target)
+
+    def test_navigation_waypoints_advance_after_timeout(self):
+        navigator = WaypointNavigatorState(
+            waypoints=[(0.3, 0.0), (-0.3, 0.0)],
+            max_steps_per_waypoint=2,
+        )
+        pose = Pose2D(x=0.0, y=0.0, theta=0.0)
+        first_target = navigator.current_target()
+
+        compute_wheel_speeds([0.0] * 8, pose=pose, navigation_state=navigator)
+        compute_wheel_speeds([0.0] * 8, pose=pose, navigation_state=navigator)
+        compute_wheel_speeds([0.0] * 8, pose=pose, navigation_state=navigator)
+
+        self.assertNotEqual(navigator.current_target(), first_target)
 
 
 if __name__ == "__main__":
